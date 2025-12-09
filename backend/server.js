@@ -56,7 +56,8 @@ app.use('/api/reviews', reviewRoutes);
 // ----- Flags API ----- //
 const flagRoutes = require('./routes/flagRoutes');
 app.use('/api/flags', flagRoutes);
-
+//---------------------- AI AGENT API ----- //
+app.use('/api/ai-agent', require('./routes/aiAgentRoutes'));
 // =======================
 // Test route
 // =======================
