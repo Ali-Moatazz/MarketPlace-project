@@ -34,10 +34,10 @@ const userSchema = new mongoose.Schema({
     enum: ['buyer', 'seller'],
     required: [true, 'Role is required']
   },
-  address: {
+   address: {
     type: String,
-    required: [true, 'Address is required for delivery'],
-    minlength: [10, 'Address must be at least 10 characters'] // ADD THIS
+    required: [true, 'Detailed address is required'], // e.g., "Street 9, Zahraa El Maadi"
+    minlength: [10, 'Address must be at least 10 characters'] 
   },
   phone: {
     type: String,
@@ -64,6 +64,12 @@ const userSchema = new mongoose.Schema({
   },
   serviceArea: {
     type: String
+  },
+
+  governate: {
+    type: String,
+    required: function() { return this.role === 'buyer'; }, // Only required for buyers
+    trim: true
   },
 
   // --- NEW: Store Seller's Email Credentials ---

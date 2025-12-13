@@ -3,10 +3,16 @@ const Flag = require('../models/Flag');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+
+exports.getMe = async (req, res) => {
+  const user = await User.findById(req.user.userId);
+  res.json({ success: true, user }); // Returns { success: true, user: {...} }
+};
+
 // Register new user
 exports.register = async (req, res) => {
   try {
-    const { name, email, password, role, address, phone, storeName, serviceArea, googleAppPassword } = req.body;
+    const { name, email, password, role, address, phone, storeName, serviceArea, googleAppPassword, governate } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -21,7 +27,7 @@ exports.register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create user object
-    const userData = { name, email, password: hashedPassword, role, address, phone };
+    const userData = { name, email, password: hashedPassword, role, address, phone, governate: role === 'buyer' ? governate : undefined };
 
     // Add seller-specific fields
     if (role === 'seller') {
@@ -54,7 +60,8 @@ exports.register = async (req, res) => {
           address: user.address,
           phone: user.phone,
           storeName: user.storeName,
-          serviceArea: user.serviceArea
+          serviceArea: user.serviceArea,
+          governate: user.governate
         },
         token
       }
@@ -107,7 +114,8 @@ exports.login = async (req, res) => {
           storeName: user.storeName,
           serviceArea: user.serviceArea,
           rating_seller: user.rating_seller,
-          flagsCount
+          flagsCount,
+          governate: user.governate
         },
         token
       }
