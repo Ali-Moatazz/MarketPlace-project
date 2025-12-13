@@ -4,6 +4,15 @@ import AuthContext from '../../context/AuthContext';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
 
+
+const EGYPT_GOVERNATES = [
+  "Cairo", "Giza", "Alexandria", "Dakahlia", "Red Sea", "Beheira", "Fayoum", 
+  "Gharbiya", "Ismailia", "Menofia", "Minya", "Qaliubiya", "New Valley", 
+  "Suez", "Aswan", "Assiut", "Beni Suef", "Port Said", "Damietta", 
+  "Sharkia", "South Sinai", "Kafr Al sheikh", "Matrouh", "Luxor", 
+  "Qena", "North Sinai", "Sohag"
+];
+
 const Register = () => {
   const navigate = useNavigate();
   const { register } = useContext(AuthContext);
@@ -15,7 +24,8 @@ const Register = () => {
     confirmPassword: '', // Added field
     phone: '',
     address: '',
-    role: 'buyer', 
+    role: 'buyer',
+    governate: 'Cairo', // Default value 
     storeName: '',
     serviceArea: '',
     googleAppPassword: ''
@@ -124,9 +134,39 @@ const Register = () => {
             <Input label="Confirm Password" type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} required placeholder="Repeat password" />
           </div>
 
-          <Input label="Phone Number" name="phone" value={formData.phone} onChange={handleChange} required placeholder="01012345678" />
-          <Input label="Address" name="address" value={formData.address} onChange={handleChange} required placeholder="Delivery address" />
+         <Input label="Phone Number" name="phone" value={formData.phone} onChange={handleChange} required placeholder="01012345678" />
 
+          {/* --- NEW: GOVERNATE DROPDOWN (Required for delivery check) --- */}
+          {formData.role === 'buyer' && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Governate <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="governate"
+                value={formData.governate}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              >
+                {EGYPT_GOVERNATES.map((gov) => (
+                  <option key={gov} value={gov}>
+                    {gov}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <Input 
+            label="Detailed Address" 
+            name="address" 
+            value={formData.address} 
+            onChange={handleChange} 
+            required 
+            placeholder="e.g. Building 10, Street 9" 
+          />
+
+          
           {/* SELLER FIELDS */}
           {formData.role === 'seller' && (
             <div className="border-t border-gray-200 pt-4 mt-4 bg-blue-50 p-4 rounded">

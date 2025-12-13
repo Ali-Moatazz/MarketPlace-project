@@ -40,19 +40,15 @@ exports.createProduct = async (req, res) => {
 
 exports.getAllProducts = async (req, res) => {
   try {
-    // HIS IMPROVEMENT: Populate seller info
-    const products = await Product.find().populate('sellerId', 'name email storeName');
+    // --- UPDATED LINE: Added 'serviceArea' to the list ---
+    const products = await Product.find().populate('sellerId', 'name email storeName serviceArea');
     
-    // HIS RESPONSE FORMAT
     res.json({
       success: true,
       products
     });
   } catch (err) {
-    res.status(500).json({ 
-      success: false,
-      error: err.message 
-    });
+    res.status(500).json({ success: false, error: err.message });
   }
 };
 
@@ -63,7 +59,7 @@ exports.getAllProducts = async (req, res) => {
 exports.getProductsByCategory = async (req, res) => {
   try {
     const category = req.params.category;
-    const products = await Product.find({ category }).populate('sellerId', 'name email storeName');
+    const products = await Product.find({ category }).populate('sellerId', 'name email storeName serviceArea');
     
     // UPDATED: Use his response format
     res.json({
@@ -156,7 +152,7 @@ exports.deleteProduct = async (req, res) => {
 
 exports.getProductById = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id).populate('sellerId', 'name email');
+    const product = await Product.findById(req.params.id).populate('sellerId', 'name email storeName serviceArea');
     if (!product) {
       return res.status(404).json({ 
         success: false,
@@ -236,15 +232,7 @@ exports.purchaseProduct = async (req, res) => {
   }
 };
 
-exports.getProductById = async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.id).populate('sellerId', 'name storeName storeName');
-    if (!product) return res.status(404).json({ error: 'Product not found' });
-    res.json(product);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
+
 
 
 exports.searchProducts = async (req, res) => {

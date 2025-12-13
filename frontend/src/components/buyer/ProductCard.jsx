@@ -1,7 +1,55 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
+import AuthContext from '../../context/AuthContext';
 
 const ProductCard = ({ product, onAddToCart }) => {
+
+  const { user } = useContext(AuthContext); // 2. Get current user
+
+  const handleAddToCart = () => {
+    // --- CHECK 1: Is user logged in? ---
+    if (!user) {
+      alert("Please login to purchase items.");
+      return;
+    }
+
+    // --- CHECK 2: Is user a Buyer? ---
+    if (user.role !== 'buyer') {
+      alert("Sellers cannot make purchases.");
+      return;
+    }
+
+    // --- CHECK 3: DELIVERY AREA VALIDATION (The "Beginning" Check) ---
+    const sellerArea = product.sellerId?.serviceArea;
+    
+    // Check if seller has specific areas defined
+    if (sellerArea && sellerArea.trim().length > 0) {
+      
+      // Get buyer's location
+      const buyerLocation = (user.governate || user.address || "").toLowerCase();
+      
+      // Split seller areas (e.g. "Cairo, Giza" -> ["cairo", "giza"])
+      const allowedAreas = sellerArea.split(',').map(area => area.trim().toLowerCase());
+
+      // Check if buyer's location matches ANY allowed area
+      const isMatch = allowedAreas.some(area => buyerLocation.includes(area));
+
+      if (!isMatch) {
+        // 🛑 STOP HERE! Do not proceed to onAddToCart
+        alert(
+          `🚫 Delivery Not Available\n\n` +
+          `You are in: ${user.governate || "Unknown"}\n` +
+          `This seller only delivers to: ${sellerArea}`
+        );
+        return; 
+      }
+    }
+
+    // --- IF ALL CHECKS PASS, ADD TO CART ---
+    onAddToCart(product);
+  };
+
+  
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col h-full">
       
@@ -45,7 +93,7 @@ const ProductCard = ({ product, onAddToCart }) => {
         </p>
 
         <button 
-          onClick={() => onAddToCart(product)}
+          onClick={() => handleAddToCart()}
           disabled={product.stock <= 0}
           className={`mt-4 w-full py-2 px-4 rounded transition-colors ${
             product.stock > 0 

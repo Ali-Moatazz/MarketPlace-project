@@ -13,9 +13,11 @@ export const AuthProvider = ({ children }) => {
       const token = localStorage.getItem('token');
       if (token) {
         try {
-          const res = await getMyProfile();
+          const res = await getMyProfile(); 
           if (res.success) {
-            setUser(res.data);
+            // FIX: Ensure you are picking the 'user' object, not 'res.data' 
+            // (unless your API wrapper wraps it differently)
+            setUser(res.user || res.data); 
           }
         } catch (err) {
           console.error("Session expired");
