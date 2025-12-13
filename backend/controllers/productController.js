@@ -8,7 +8,7 @@ const mongoose = require('mongoose');
 
 exports.createProduct = async (req, res) => {
   try {
-    // HIS SECURITY: Check if user has seller role
+    // Check if user has seller role
     if (req.user.role !== 'seller') {
       return res.status(403).json({ 
         success: false,
@@ -16,16 +16,15 @@ exports.createProduct = async (req, res) => {
       });
     }
 
-    // HIS FEATURE: Auto-assign sellerId
+    // Auto-assign sellerId
     const productData = {
       ...req.body,
       sellerId: req.user.userId
     };
     
-    // YOUR FEATURE: Basic product creation
+    // Create product
     const product = await Product.create(productData);
     
-    // HIS RESPONSE FORMAT
     res.status(201).json({
       success: true,
       product
@@ -40,10 +39,9 @@ exports.createProduct = async (req, res) => {
 
 exports.getAllProducts = async (req, res) => {
   try {
-    // --- UPDATED LINE: Added 'serviceArea' to the list ---
-    const products = await Product.find().populate('sellerId', 'name email storeName serviceArea');
-    // HIS IMPROVEMENT: Populate seller info
-    const products = await Product.find().populate('sellerId', 'name email storeName flagsCount');
+    // Combine fields into one populate call
+    const products = await Product.find()
+      .populate('sellerId', 'name email storeName serviceArea flagsCount');
     
     res.json({
       success: true,
@@ -61,10 +59,10 @@ exports.getAllProducts = async (req, res) => {
 exports.getProductsByCategory = async (req, res) => {
   try {
     const category = req.params.category;
-    const products = await Product.find({ category }).populate('sellerId', 'name email storeName serviceArea');
-    const products = await Product.find({ category }).populate('sellerId', 'name email storeName flagsCount');
+    // Combine fields into one populate call
+    const products = await Product.find({ category })
+      .populate('sellerId', 'name email storeName serviceArea flagsCount');
     
-    // UPDATED: Use his response format
     res.json({
       success: true,
       products
@@ -81,7 +79,6 @@ exports.updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
     
-    // YOUR FEATURE: Basic update + HIS SECURITY
     const product = await Product.findById(id);
     if (!product) {
       return res.status(404).json({ 
@@ -90,7 +87,7 @@ exports.updateProduct = async (req, res) => {
       });
     }
 
-    // HIS SECURITY: Check ownership
+    // Check ownership
     if (product.sellerId.toString() !== req.user.userId) {
       return res.status(403).json({ 
         success: false,
@@ -100,7 +97,6 @@ exports.updateProduct = async (req, res) => {
 
     const updatedProduct = await Product.findByIdAndUpdate(id, req.body, { new: true });
     
-    // UPDATED: Use his response format
     res.json({
       success: true,
       product: updatedProduct
@@ -117,7 +113,6 @@ exports.deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
     
-    // YOUR FEATURE: Basic delete + HIS SECURITY
     const product = await Product.findById(id);
     if (!product) {
       return res.status(404).json({ 
@@ -126,7 +121,7 @@ exports.deleteProduct = async (req, res) => {
       });
     }
 
-    // HIS SECURITY: Check ownership
+    // Check ownership
     if (product.sellerId.toString() !== req.user.userId) {
       return res.status(403).json({ 
         success: false,
@@ -134,9 +129,8 @@ exports.deleteProduct = async (req, res) => {
       });
     }
 
-    const deletedProduct = await Product.findByIdAndDelete(id);
+    await Product.findByIdAndDelete(id);
     
-    // UPDATED: Use his response format
     res.json({ 
       success: true,
       message: 'Product deleted successfully' 
@@ -155,8 +149,10 @@ exports.deleteProduct = async (req, res) => {
 
 exports.getProductById = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id).populate('sellerId', 'name email storeName serviceArea');
-    const product = await Product.findById(req.params.id).populate('sellerId', 'name email storeName flagsCount');
+    // Combine fields into one populate call
+    const product = await Product.findById(req.params.id)
+      .populate('sellerId', 'name email storeName serviceArea flagsCount');
+
     if (!product) {
       return res.status(404).json({ 
         success: false,
@@ -236,30 +232,24 @@ exports.purchaseProduct = async (req, res) => {
   }
 };
 
-
-
-
 exports.searchProducts = async (req, res) => {
   try {
     const { keyword, category } = req.query;
     
-    // 1. Build the database query object dynamically
     let query = {};
 
-    // If a keyword exists, search the 'title' field (case-insensitive)
     if (keyword) {
       query.title = { $regex: keyword, $options: 'i' };
     }
 
-    // If a category exists, match it exactly
     if (category) {
       query.category = category;
     }
 
-    // 2. Find products matching the query
-    const products = await Product.find(query) .populate('sellerId', 'name storeName flagsCount');
+    // Populate seller info here too
+    const products = await Product.find(query)
+      .populate('sellerId', 'name storeName flagsCount serviceArea');
 
-    // 3. Return results
     res.json({
       success: true,
       count: products.length,
@@ -282,7 +272,6 @@ exports.getCategories = async (req, res) => {
 
 exports.updateProductStock = async (req, res) => {
   try {
-    // Check if user has seller role
     if (req.user.role !== 'seller') {
       return res.status(403).json({ 
         success: false,
@@ -300,7 +289,6 @@ exports.updateProductStock = async (req, res) => {
       });
     }
 
-    // Check if user is the seller of this product
     if (product.sellerId.toString() !== req.user.userId) {
       return res.status(403).json({ 
         success: false,

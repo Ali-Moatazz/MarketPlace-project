@@ -168,7 +168,7 @@ const Dashboard = () => {
             {/* Modal Body */}
             <div className="p-4 max-h-[60vh] overflow-y-auto">
               <div className="mb-4 bg-blue-50 p-3 rounded text-sm text-blue-800 border border-blue-100">
-                <span className="font-bold">Note:</span> These reports were submitted by buyers regarding your orders. Buyer identities are kept anonymous to prevent retaliation.
+                <span className="font-bold">Note:</span> These reports were submitted by buyers regarding your orders. Buyer identities are kept anonymous to keep security.
               </div>
 
               {flags.map((flag, index) => (
