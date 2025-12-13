@@ -41,7 +41,7 @@ exports.createProduct = async (req, res) => {
 exports.getAllProducts = async (req, res) => {
   try {
     // HIS IMPROVEMENT: Populate seller info
-    const products = await Product.find().populate('sellerId', 'name email storeName');
+    const products = await Product.find().populate('sellerId', 'name email storeName flagsCount');
     
     // HIS RESPONSE FORMAT
     res.json({
@@ -63,7 +63,7 @@ exports.getAllProducts = async (req, res) => {
 exports.getProductsByCategory = async (req, res) => {
   try {
     const category = req.params.category;
-    const products = await Product.find({ category }).populate('sellerId', 'name email storeName');
+    const products = await Product.find({ category }).populate('sellerId', 'name email storeName flagsCount');
     
     // UPDATED: Use his response format
     res.json({
@@ -156,7 +156,7 @@ exports.deleteProduct = async (req, res) => {
 
 exports.getProductById = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id).populate('sellerId', 'name email');
+    const product = await Product.findById(req.params.id).populate('sellerId', 'name email storeName flagsCount');
     if (!product) {
       return res.status(404).json({ 
         success: false,
@@ -265,7 +265,7 @@ exports.searchProducts = async (req, res) => {
     }
 
     // 2. Find products matching the query
-    const products = await Product.find(query);
+    const products = await Product.find(query) .populate('sellerId', 'name storeName flagsCount');
 
     // 3. Return results
     res.json({

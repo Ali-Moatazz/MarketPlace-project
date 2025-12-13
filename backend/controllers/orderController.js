@@ -85,7 +85,7 @@ exports.getOrders = async (req, res) => {
         'products.productId': { $in: productIds } 
       }).populate("products.productId").populate("userId", "name email");
     } else {
-      // Buyers and admins can see all orders (or adjust as needed)
+      // Buyers and admins can see all orders
       orders = await Order.find().populate("products.productId").populate("userId", "name email");
     }
     
@@ -113,9 +113,19 @@ exports.getUserOrders = async (req, res) => {
           error: 'Not authorized to view these orders' 
         });
       }
+      
+      // FIX: Deep populate (Order -> Product -> Seller)
+      // This is required for the Flagging System to work from the Order History page
       orders = await Order.find({ userId: req.params.userId })
-        .populate("products.productId")
+        .populate({
+          path: 'products.productId',
+          populate: { 
+            path: 'sellerId', 
+            select: 'name email storeName' 
+          }
+        })
         .populate("userId", "name email");
+
     } else if (req.user.role === 'seller') {
       // Sellers can see orders for their products
       const sellerProducts = await Product.find({ sellerId: req.user.userId });
@@ -158,6 +168,36 @@ exports.updateOrder = async (req, res) => {
       return res.status(404).json({ error: "Order not found" });
     }
 
+    // --- NEW LOGIC: Allow Buyer to Cancel ---
+    if (req.user.role === 'buyer') {
+      // Check ownership
+      if (existingOrder.userId._id.toString() !== req.user.userId) {
+        return res.status(403).json({ error: "You are not authorized to modify this order" });
+      }
+      
+      // Buyers can ONLY set status to 'cancelled'
+      if (status !== 'cancelled') {
+        return res.status(403).json({ error: "Buyers can only cancel orders" });
+      }
+
+      // Buyers can ONLY cancel if currently 'pending'
+      if (existingOrder.status !== 'pending') {
+        return res.status(400).json({ error: "Cannot cancel order. It is already processed or shipped." });
+      }
+    }
+    // ----------------------------------------
+
+    // Standard Seller check: prevent changing final states
+    // (Unless it's the buyer cancelling a pending order, which passed above)
+    if (req.user.role === 'seller') {
+        if (existingOrder.status === 'delivered' || existingOrder.status === 'cancelled') {
+            return res.status(400).json({ 
+                success: false, 
+                error: `Order is already ${existingOrder.status} and cannot be changed.`
+            });
+        }
+    }
+
     const oldStatus = existingOrder.status;
     const buyer = existingOrder.userId;
 
@@ -165,23 +205,18 @@ exports.updateOrder = async (req, res) => {
     let seller = null;
     if (existingOrder.products.length > 0 && existingOrder.products[0].productId) {
       seller = existingOrder.products[0].productId.sellerId;
-      console.log("------------------------------------------------");
-      console.log("DEBUG: Order ID:", id);
-      console.log("DEBUG: Seller Found:", seller ? seller.email : "None");
-      console.log("DEBUG: Has Password?", seller && seller.googleAppPassword ? "YES" : "NO");
-      console.log("------------------------------------------------");
-      
     }
 
     // 3. Update the Order
     const updatedOrder = await Order.findByIdAndUpdate(
       id,
-      req.body,
+      { status }, // Use specific field update to be safe
       { new: true }
     );
 
     // 4. Send Email IF status changed AND Seller has credentials
-    if (status && oldStatus !== status && buyer && seller && seller.googleAppPassword) {
+    // FIX: Added (status !== 'cancelled') to suppress emails on cancellation
+    if (status && oldStatus !== status && status !== 'cancelled' && buyer && seller && seller.googleAppPassword) {
 
       console.log(`Attempting to send email via Seller: ${seller.email}`);
 
@@ -214,7 +249,7 @@ exports.updateOrder = async (req, res) => {
         }
       });
 
-    } else if (status && oldStatus !== status) {
+    } else if (status && oldStatus !== status && status !== 'cancelled') {
       console.log("Skipping email: Seller has not configured App Password.");
     }
 

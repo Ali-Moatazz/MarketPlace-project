@@ -1,22 +1,27 @@
 import React, { useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthContext from '../../context/AuthContext';
-// --- EDIT: Import CartContext ---
 import CartContext from '../../context/CartContext'; 
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
-  // --- EDIT: Get cart state from Context ---
-  const { cartCount, setIsCartOpen } = useContext(CartContext); 
+  
+  // MERGED: Get all necessary cart functions and state
+  // 1. cartCount & setIsCartOpen (From Ver 2 for UI)
+  // 2. clearCart (From Ver 1 for Logout logic)
+  const { cartCount, setIsCartOpen, clearCart } = useContext(CartContext); 
   
   const navigate = useNavigate();
 
+  // MERGED LOGIC: Use Version 1's logout handler
   const handleLogout = () => {
-    logout();
+    clearCart(); // Clear the cart state first
+    logout();    // Then log out
     navigate('/login');
   };
 
   return (
+    // UI STRUCTURE: Used Version 2 (Sticky & Styling)
     <nav className="bg-white shadow-md sticky top-0 z-30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
@@ -31,7 +36,7 @@ const Navbar = () => {
           {/* Right Side Actions */}
           <div className="flex items-center space-x-6">
             
-            {/* --- NEW EDIT: Cart Icon (Only for Buyers or Guests) --- */}
+            {/* Cart Icon (Only for Buyers or Guests) */}
             {(!user || user.role === 'buyer') && (
               <button 
                 onClick={() => setIsCartOpen(true)}
