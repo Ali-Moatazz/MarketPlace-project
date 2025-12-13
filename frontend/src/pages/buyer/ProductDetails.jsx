@@ -64,6 +64,13 @@ const ProductDetails = () => {
             <div className="bg-gray-50 p-3 rounded">
               <span className="block text-gray-500">Seller</span>
               <span className="font-medium">{product.sellerId?.storeName || 'Unknown Store'}</span>
+              
+              {/* --- NEW: Display Flag Count --- */}
+              {product.sellerId?.flagsCount > 0 && (
+                <span className="block text-red-600 font-bold mt-1 text-xs">
+                  ⚠️ Flagged {product.sellerId.flagsCount} times
+                </span>
+              )}
             </div>
             <div className="bg-gray-50 p-3 rounded">
               <span className="block text-gray-500">Estimated Delivery</span>

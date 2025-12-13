@@ -1,24 +1,50 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
+import AuthContext from './AuthContext'; // 1. Import Auth
 
 const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
-  // Load initial cart from LocalStorage if available
-  const [cartItems, setCartItems] = useState(() => {
-    const saved = localStorage.getItem('cart');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const { user, loading } = useContext(AuthContext); // 2. Get the current user
   
+  const [cartItems, setCartItems] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Save to LocalStorage whenever cart changes
+  // Helper: Get unique key for storage
+  const getCartKey = () => {
+    if (user && user._id) return `cart_${user._id}`;
+    if (user && user.id) return `cart_${user.id}`;
+    return 'cart_guest';
+  };
+
+  // 3. Load Cart when User Changes (Login/Logout)
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cartItems));
-  }, [cartItems]);
+    if (loading) return; // Wait for Auth to finish loading
 
-  // --- Core Logic: Add to Cart ---
+    const key = getCartKey();
+    const savedCart = localStorage.getItem(key);
+
+    if (savedCart) {
+      setCartItems(JSON.parse(savedCart));
+    } else {
+      setCartItems([]);
+    }
+    setIsInitialized(true);
+  }, [user, loading]);
+
+  // 4. Save Cart whenever items change
+  useEffect(() => {
+    // Only save if we have finished the initial load (prevents overwriting with empty array on boot)
+    if (isInitialized) {
+      const key = getCartKey();
+      localStorage.setItem(key, JSON.stringify(cartItems));
+    }
+  }, [cartItems, user, isInitialized]);
+
+  // --- Cart Actions (Same logic, but rely on the effects above to save) ---
+
   const addToCart = (product) => {
-    // 1. Check if cart has items from a DIFFERENT seller
+    // Check for different seller conflict
     if (cartItems.length > 0) {
       const currentSellerId = cartItems[0].sellerId?._id || cartItems[0].sellerId;
       const newSellerId = product.sellerId?._id || product.sellerId;
@@ -28,19 +54,31 @@ export const CartProvider = ({ children }) => {
           "You can only order from one seller at a time. Clear current cart to add this item?"
         );
         if (confirmSwitch) {
-          setCartItems([]); // Clear cart then proceed to add below
+          setCartItems([]); 
+          // We return here. The user has to click add again, or we can recursively call logic.
+          // For simplicity, we clear and let them add again or handle it immediately below:
+          // Ideally, we clear then add.
+           setCartItems([{
+            productId: product._id,
+            title: product.title,
+            price: product.price,
+            image: product.images?.[0],
+            sellerId: product.sellerId?._id || product.sellerId,
+            storeName: product.sellerId?.storeName || "Seller",
+            quantity: 1,
+            maxStock: product.stock
+          }]);
+          setIsCartOpen(true);
+          return;
         } else {
-          return; // User cancelled
+          return;
         }
       }
     }
 
-    // 2. Add Item or Increment Quantity
     setCartItems((prevItems) => {
       const existingItem = prevItems.find((item) => item.productId === product._id);
-
       if (existingItem) {
-        // Check Stock Limit
         if (existingItem.quantity + 1 > product.stock) {
           alert(`Only ${product.stock} items available in stock!`);
           return prevItems;
@@ -51,15 +89,14 @@ export const CartProvider = ({ children }) => {
             : item
         );
       } else {
-        // Add new item (Store essential details for UI)
         return [
           ...prevItems,
           {
             productId: product._id,
             title: product.title,
             price: product.price,
-            image: product.images?.[0], // Store first image
-            sellerId: product.sellerId?._id || product.sellerId, // Important for tracking seller
+            image: product.images?.[0],
+            sellerId: product.sellerId?._id || product.sellerId,
             storeName: product.sellerId?.storeName || "Seller",
             quantity: 1,
             maxStock: product.stock
@@ -67,16 +104,13 @@ export const CartProvider = ({ children }) => {
         ];
       }
     });
-
-    setIsCartOpen(true); // Open drawer on add
+    setIsCartOpen(true);
   };
 
-  // --- Remove Item ---
   const removeFromCart = (productId) => {
     setCartItems((prev) => prev.filter((item) => item.productId !== productId));
   };
 
-  // --- Update Quantity (Optional UI helper) ---
   const updateQuantity = (productId, newQty) => {
     setCartItems((prev) => 
       prev.map(item => {
@@ -89,12 +123,10 @@ export const CartProvider = ({ children }) => {
     );
   };
 
-  // --- Clear Cart ---
   const clearCart = () => {
     setCartItems([]);
   };
 
-  // --- Calculated Totals ---
   const cartTotal = cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
   const cartCount = cartItems.reduce((count, item) => count + item.quantity, 0);
 

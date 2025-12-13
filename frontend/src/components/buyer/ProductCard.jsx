@@ -53,10 +53,6 @@ const ProductCard = ({ product, onAddToCart }) => {
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 flex flex-col h-full">
       
-      {/* 
-         FIX: Changed object-cover to object-contain
-         Added p-4 so the image has some breathing room
-      */}
       <div className="h-64 w-full bg-white relative p-4 flex items-center justify-center">
         {product.images && product.images.length > 0 ? (
            <img 
@@ -88,9 +84,18 @@ const ProductCard = ({ product, onAddToCart }) => {
           </div>
         </div>
         
-        <p className="text-xs text-gray-400 mt-2 line-clamp-1">
-          Sold by: {product.sellerId?.storeName || 'Unknown Seller'}
-        </p>
+        <div className="mt-2">
+          <p className="text-xs text-gray-400 line-clamp-1">
+            Sold by: {product.sellerId?.storeName || 'Unknown Seller'}
+          </p>
+          
+          {/* --- NEW: Display Flag Count --- */}
+          {product.sellerId?.flagsCount > 0 && (
+            <p className="text-xs text-red-600 font-bold mt-1 flex items-center">
+              ⚠️ Warning: Seller flagged {product.sellerId.flagsCount} times
+            </p>
+          )}
+        </div>
 
         <button 
           onClick={() => handleAddToCart()}

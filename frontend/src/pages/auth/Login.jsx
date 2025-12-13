@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext } from 'react'; // --- REMOVED useEffect ---
 import { useNavigate, Link } from 'react-router-dom';
 import AuthContext from '../../context/AuthContext';
 import Input from '../../components/common/Input';
@@ -7,30 +7,26 @@ import Button from '../../components/common/Button';
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login } = useContext(AuthContext);
+  
+  // Get 'error' from context and rename it to 'authError'
+  const { login, error: authError } = useContext(AuthContext);
+  
   const navigate = useNavigate();
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
-
-    // --- UPDATED REDIRECT LOGIC ---
+    
     const loggedInUser = await login(email, password);
     
     if (loggedInUser) {
-      // Check the role and redirect to the specific "App"
       if (loggedInUser.role === 'seller') {
-        navigate('/seller/dashboard'); // Go to Seller App
+        navigate('/seller/dashboard');
       } else {
-        navigate('/'); // Go to Buyer App
+        navigate('/');
       }
-    } else {
-      // Error is handled in context, but we can set a generic one if needed
-      // context already sets 'error' state which you could expose if you wanted
-    }
+    } 
     setLoading(false);
   };
 
@@ -49,8 +45,12 @@ const Login = () => {
           </p>
         </div>
         
-        {/* If AuthContext exposes 'error', you can use it here too */}
-        {error && <div className="bg-red-100 text-red-700 p-3 rounded">{error}</div>}
+        {/* Display the context error */}
+        {authError && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+            <span className="block sm:inline">{authError}</span>
+          </div>
+        )}
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <Input

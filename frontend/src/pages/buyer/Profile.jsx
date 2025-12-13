@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import AuthContext from '../../context/AuthContext';
-import { getUserOrders } from '../../api/orders';
+import { getUserOrders, updateOrderStatus } from '../../api/orders';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import FlagUserModal from '../../components/seller/FlagUserModal';
 
@@ -13,6 +13,28 @@ const Profile = () => {
   const [flagModalOpen, setFlagModalOpen] = useState(false);
   const [selectedOrderForFlag, setSelectedOrderForFlag] = useState(null);
 
+  // --- NEW: Cancellation Handler ---
+  const handleCancelOrder = async (orderId) => {
+    if (!window.confirm("Are you sure you want to cancel this order?")) {
+      return;
+    }
+
+    try {
+      // 1. Call API to update status to 'cancelled'
+      const res = await updateOrderStatus(orderId, 'cancelled');
+      
+      if (res.success) {
+        alert("Order cancelled successfully.");
+        // 2. Update Local State to reflect change immediately
+        setOrders(prevOrders => 
+          prevOrders.map(o => o._id === orderId ? { ...o, status: 'cancelled' } : o)
+        );
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to cancel order");
+    }
+  };
+
   useEffect(() => {
     if (user) fetchOrders();
   }, [user]);
@@ -20,7 +42,9 @@ const Profile = () => {
   const fetchOrders = async () => {
     try {
       const res = await getUserOrders(user.id || user._id);
-      setOrders(res.orders || []);
+      // Sort newest first
+      const sorted = (res.orders || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      setOrders(sorted);
     } catch (err) {
       console.error("Failed to load orders", err);
     } finally {
@@ -29,8 +53,6 @@ const Profile = () => {
   };
 
   const handleOpenFlagModal = (order) => {
-    // We need the Seller ID to flag them.
-    // Based on "One Seller per Order" rule, we take the seller from the first product
     const seller = order.products[0]?.productId?.sellerId;
     if (!seller) return alert("Seller info not found");
 
@@ -97,7 +119,6 @@ const Profile = () => {
                 {order.products.map((item, idx) => (
                   <div key={idx} className="flex justify-between items-center mb-4 last:mb-0">
                     <div className="flex items-center">
-                       {/* Assuming product population works */}
                        <div className="font-medium text-gray-800">
                          {item.quantity}x {item.productId?.title || 'Unknown Item'}
                        </div>
@@ -109,16 +130,27 @@ const Profile = () => {
                 ))}
                 
                 {/* Action Buttons */}
-                <div className="mt-6 flex justify-end space-x-4 border-t pt-4">
+                <div className="mt-6 flex justify-end space-x-4 border-t pt-4 items-center">
+                  
+                  {/* --- NEW: Cancel Button (Only if Pending) --- */}
+                  {order.status === 'pending' && (
+                    <button
+                      onClick={() => handleCancelOrder(order._id)}
+                      className="text-sm bg-white border border-gray-300 text-gray-700 px-3 py-1 rounded hover:bg-gray-50 transition"
+                    >
+                      Cancel Order
+                    </button>
+                  )}
+
+                  {/* Flag Button (If Pending or Shipping) */}
                   {(order.status === 'pending' || order.status === 'shipping') && (
                      <button 
                        onClick={() => handleOpenFlagModal(order)}
                        className="text-sm text-red-600 hover:text-red-800 font-medium"
                      >
-                       Report Issue / Flag Seller
+                       Report Issue
                      </button>
                   )}
-                  {/* You can add a "Track Order" button here if you want */}
                 </div>
               </div>
             </div>
