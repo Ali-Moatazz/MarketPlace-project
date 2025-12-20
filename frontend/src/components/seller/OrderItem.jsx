@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { updateOrderStatus } from '../../api/orders';
+import FlagUserModal from './FlagUserModal'; // IMPORTED: The reporting modal
 
 const OrderItem = ({ order, onStatusChange }) => {
   const [updating, setUpdating] = useState(false);
+  const [isFlagModalOpen, setIsFlagModalOpen] = useState(false); // STATE: Controls the report modal
 
   const handleStatusChange = async (newStatus) => {
-    if(!window.confirm(`Change status to ${newStatus}?`)) return;
-    
+    if (!window.confirm(`Change status to ${newStatus}?`)) return;
+
     setUpdating(true);
     try {
       const res = await updateOrderStatus(order._id, newStatus);
@@ -35,15 +37,23 @@ const OrderItem = ({ order, onStatusChange }) => {
           <p className="text-sm text-gray-500">
             Placed by: {order.userId?.name} ({order.userId?.email})
           </p>
-          <p className="text-sm text-gray-500">
+
+          {/* WARNING: Appears if the buyer has been flagged by other sellers before */}
+          {order.userId?.flagsCount > 0 && (
+            <div className="mt-2 bg-red-100 border border-red-200 text-red-700 px-3 py-1 rounded text-xs font-bold flex items-center gap-1 animate-pulse">
+              <span>⚠️ Warning: This buyer has been flagged {order.userId.flagsCount} times!</span>
+            </div>
+          )}
+
+          <p className="text-sm text-gray-500 mt-2">
             Date: {new Date(order.createdAt).toLocaleDateString()}
           </p>
           <div className="mt-2 text-sm">
-            <strong>Shipping Address:</strong> <br/>
+            <strong>Shipping Address:</strong> <br />
             {order.userId?.address || "No address provided"}
           </div>
         </div>
-        
+
         <div className="text-right">
           <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.status)}`}>
             {order.status.toUpperCase()}
@@ -63,7 +73,7 @@ const OrderItem = ({ order, onStatusChange }) => {
       </div>
 
       {/* Seller Actions */}
-      <div className="mt-4 flex space-x-2 border-t pt-4">
+      <div className="mt-4 flex flex-wrap gap-2 border-t pt-4">
         {['pending', 'shipping', 'delivered', 'cancelled'].map((status) => (
           <button
             key={status}
@@ -75,7 +85,26 @@ const OrderItem = ({ order, onStatusChange }) => {
             Mark {status}
           </button>
         ))}
+
+        {/* REPORT BUYER BUTTON: Only appears for Delivered or Cancelled orders */}
+        {(order.status === 'delivered' || order.status === 'cancelled') && (
+          <button
+            onClick={() => setIsFlagModalOpen(true)}
+            className="ml-auto px-4 py-1 text-xs rounded border border-red-500 text-red-600 font-bold hover:bg-red-50 transition-colors"
+          >
+            🚩 Report Buyer
+          </button>
+        )}
       </div>
+
+      {/* REPORTING MODAL */}
+      <FlagUserModal
+        isOpen={isFlagModalOpen}
+        onClose={() => setIsFlagModalOpen(false)}
+        reportedUser={order.userId}
+        orderId={order._id}
+        onSuccess={() => alert('The buyer has been reported successfully.')}
+      />
     </div>
   );
 };

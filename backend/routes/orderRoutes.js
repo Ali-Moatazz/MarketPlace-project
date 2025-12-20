@@ -13,7 +13,7 @@ const { auth } = require('../middleware/auth');
 
 // All order routes require authentication
 router.post('/', auth, createOrder);
-router.get('/', auth, getOrders);
+router.get('/', auth, getOrders); //for admin to get all orders (not used)
 router.get('/user/:userId', auth, getUserOrders);
 router.put('/:id', auth, updateOrder);
 router.delete('/:id', auth, deleteOrder);

@@ -196,8 +196,6 @@ exports.updateProfile = async (req, res) => {
 
 exports.logout = async (req, res) => {
   try {
-    
-    
     res.status(200).json({
       success: true,
       message: 'Logged out successfully'
@@ -208,5 +206,43 @@ exports.logout = async (req, res) => {
       message: 'Error logging out',
       error: error.message
     });
+  }
+}; // <--- THIS BRACE WAS MISSING/MISPLACED. It closes logout().
+
+// --- NOW THESE ARE CORRECTLY EXPORTED ---
+
+exports.toggleFavorite = async (req, res) => {
+  try {
+    const { productId } = req.body;
+    const userId = req.user.userId;
+
+    const user = await User.findById(userId);
+    
+    // Check if already in favorites
+    const index = user.favorites.indexOf(productId);
+
+    if (index === -1) {
+      // Not in favorites -> Add it
+      user.favorites.push(productId);
+      await user.save();
+      return res.json({ success: true, message: 'Added to favorites', isFavorite: true, favorites: user.favorites });
+    } else {
+      // Already in favorites -> Remove it
+      user.favorites.splice(index, 1);
+      await user.save();
+      return res.json({ success: true, message: 'Removed from favorites', isFavorite: false, favorites: user.favorites });
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// --- NEW: Get Favorites ---
+exports.getFavorites = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).populate('favorites');
+    res.json({ success: true, favorites: user.favorites });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 };
