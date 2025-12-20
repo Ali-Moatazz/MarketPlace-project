@@ -83,7 +83,7 @@ exports.getOrders = async (req, res) => {
       // Find orders that contain these products
       orders = await Order.find({ 
         'products.productId': { $in: productIds } 
-      }).populate("products.productId").populate("userId", "name email");
+      }).populate("products.productId").populate("userId", "name email flagsCount address");
     } else {
       // Buyers and admins can see all orders
       orders = await Order.find().populate("products.productId").populate("userId", "name email");

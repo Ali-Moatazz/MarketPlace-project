@@ -78,6 +78,10 @@ const userSchema = new mongoose.Schema({
     type: String, 
     select: false // Do not return this by default in API calls for security
   },
+   favorites: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Product' // Assumes your product model is named 'Product'
+  }],
 
   // Embedded Notifications
   notifications: [

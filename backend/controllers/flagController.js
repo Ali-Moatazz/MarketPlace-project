@@ -4,11 +4,18 @@ const User = require('../models/User');
 // Create a new flag and increment reported user's flagsCount
 exports.createFlag = async (req, res) => {
   try {
-    // FIX: Automatically get the ID of the person reporting from the token
     const reporterId = req.user.userId;
-    
     const { reportedId, orderId, reason, type } = req.body;
-    
+
+    // --- NEW LOGIC: Check if this order has already been flagged for this specific type ---
+    const existingFlag = await Flag.findOne({ orderId, type });
+    if (existingFlag) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "You have already reported this person for this specific order." 
+      });
+    }
+
     const flag = await Flag.create({ 
       reporterId, 
       reportedId, 
@@ -17,7 +24,6 @@ exports.createFlag = async (req, res) => {
       type 
     });
 
-    // Increment flagsCount on the reported user
     await User.findByIdAndUpdate(reportedId, { $inc: { flagsCount: 1 } });
 
     res.status(201).json(flag);

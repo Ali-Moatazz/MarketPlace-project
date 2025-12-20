@@ -3,16 +3,10 @@ const Flag = require('../models/Flag');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-
-exports.getMe = async (req, res) => {
-  const user = await User.findById(req.user.userId);
-  res.json({ success: true, user }); // Returns { success: true, user: {...} }
-};
-
 // Register new user
 exports.register = async (req, res) => {
   try {
-    const { name, email, password, role, address, phone, storeName, serviceArea, googleAppPassword, governate } = req.body;
+    const { name, email, password, role, address, phone, storeName, serviceArea, googleAppPassword } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -27,7 +21,7 @@ exports.register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create user object
-    const userData = { name, email, password: hashedPassword, role, address, phone, governate: role === 'buyer' ? governate : undefined };
+    const userData = { name, email, password: hashedPassword, role, address, phone };
 
     // Add seller-specific fields
     if (role === 'seller') {
@@ -60,8 +54,7 @@ exports.register = async (req, res) => {
           address: user.address,
           phone: user.phone,
           storeName: user.storeName,
-          serviceArea: user.serviceArea,
-          governate: user.governate
+          serviceArea: user.serviceArea
         },
         token
       }
@@ -114,8 +107,7 @@ exports.login = async (req, res) => {
           storeName: user.storeName,
           serviceArea: user.serviceArea,
           rating_seller: user.rating_seller,
-          flagsCount,
-          governate: user.governate
+          flagsCount
         },
         token
       }
@@ -204,8 +196,6 @@ exports.updateProfile = async (req, res) => {
 
 exports.logout = async (req, res) => {
   try {
-    
-    
     res.status(200).json({
       success: true,
       message: 'Logged out successfully'
@@ -216,5 +206,48 @@ exports.logout = async (req, res) => {
       message: 'Error logging out',
       error: error.message
     });
+  }
+}; 
+
+
+exports.toggleFavorite = async (req, res) => {
+  try {
+    const userId = req.user.userId; // Retrieved from auth middleware
+    const { productId } = req.params;
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    // Check if product is already in favorites
+    const isFavorite = user.favorites.includes(productId);
+
+    if (isFavorite) {
+      // Remove
+      user.favorites = user.favorites.filter(id => id.toString() !== productId);
+    } else {
+      // Add
+      user.favorites.push(productId);
+    }
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: isFavorite ? 'Removed from favorites' : 'Added to favorites',
+      favorites: user.favorites
+    });
+
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error toggling favorite', error: error.message });
+  }
+};
+
+
+exports.getFavorites = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId).populate('favorites');
+    res.json({ success: true, favorites: user.favorites });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 };

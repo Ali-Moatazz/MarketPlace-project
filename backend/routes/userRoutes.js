@@ -18,4 +18,8 @@ router.get('/sellers/:id', userController.getSellerById);
 router.get('/profile', auth, userController.getProfile);
 router.put('/profile', auth, userController.updateProfile);
 
+router.get('/favorites', auth, userController.getFavorites);
+
+router.post('/favorites/:productId', auth, userController.toggleFavorite);
+
 module.exports = router;
