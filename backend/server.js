@@ -34,8 +34,8 @@ app.use(cors());
 // =======================
 
 // ----- AUTH API (MUST BE FIRST) ----- //
-const authRoutes = require('./routes/authRoutes');
-app.use('/api/auth', authRoutes);
+//const authRoutes = require('./routes/authRoutes');
+//app.use('/api/auth', authRoutes);
 
 // ----- Users API ----- //
 const userRoutes = require('./routes/userRoutes');

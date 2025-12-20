@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 // Register new user
 exports.register = async (req, res) => {
   try {
-    const { name, email, password, role, address, phone, storeName, serviceArea, googleAppPassword } = req.body;
+    const { name, email, password, role, address, phone, storeName, serviceArea, googleAppPassword, governate } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -21,7 +21,14 @@ exports.register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create user object
-    const userData = { name, email, password: hashedPassword, role, address, phone };
+    const userData = { 
+      name,
+      email,
+      password: hashedPassword,
+      role,
+      address,
+      phone,
+      governate: role === 'buyer' ? governate : undefined  };
 
     // Add seller-specific fields
     if (role === 'seller') {
@@ -54,7 +61,7 @@ exports.register = async (req, res) => {
           address: user.address,
           phone: user.phone,
           storeName: user.storeName,
-          serviceArea: user.serviceArea
+          serviceArea: user.serviceArea,
         },
         token
       }
