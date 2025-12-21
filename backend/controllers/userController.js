@@ -63,6 +63,7 @@ exports.register = async (req, res) => {
           phone: user.phone,
           storeName: user.storeName,
           serviceArea: user.serviceArea,
+          governate: user.governate
         },
         token
       }
@@ -115,7 +116,8 @@ exports.login = async (req, res) => {
           storeName: user.storeName,
           serviceArea: user.serviceArea,
           rating_seller: user.rating_seller,
-          flagsCount
+          flagsCount,
+          governate: user.governate
         },
         token
       }

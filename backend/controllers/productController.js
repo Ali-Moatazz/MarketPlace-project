@@ -173,26 +173,36 @@ exports.getProductById = async (req, res) => {
 
 exports.purchaseProduct = async (req, res) => {
   try {
-    // Check if user has buyer role
     if (req.user.role !== 'buyer') {
-      return res.status(403).json({ 
-        success: false,
-        error: 'Only buyers can purchase products' 
-      });
+      return res.status(403).json({ success: false, error: 'Only buyers can purchase products' });
     }
 
     const { productId, quantity = 1 } = req.body;
-    const userId = req.user.userId;
-
-    const product = await Product.findById(productId);
+    // FIX: Define userId from req.user
+    const userId = req.user.userId; 
     
+    // 1. Get Product and populate Seller info
+    const product = await Product.findById(productId).populate('sellerId');
     if (!product) {
-      return res.status(404).json({ 
-        success: false,
-        error: 'Product not found' 
+      return res.status(404).json({ success: false, error: 'Product not found' });
+    }
+
+    // 2. Get Buyer info (to get their governate)
+    const buyer = await User.findById(userId);
+    
+    // 3. SERVICE AREA CHECK
+    const sellerArea = product.sellerId.serviceArea || "";
+    const buyerGov = buyer.governate || "";
+
+    // Exact logic: Check if buyer's governate is inside seller's serviceArea string
+    if (!sellerArea.toLowerCase().includes(buyerGov.toLowerCase())) {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'not provided for this area' // The specific message you requested
       });
     }
 
+    // 4. STOCK CHECK
     if (product.stock < quantity) {
       return res.status(400).json({ 
         success: false,
@@ -200,7 +210,7 @@ exports.purchaseProduct = async (req, res) => {
       });
     }
 
-    // Reduce stock
+    // 5. PROCESS TRANSACTION
     product.stock -= quantity;
     await product.save();
 
@@ -208,7 +218,7 @@ exports.purchaseProduct = async (req, res) => {
 
     // Create order
     const order = await Order.create({
-      userId: userId,
+      userId: userId, // Now this variable is defined
       products: [{
         productId,
         quantity

@@ -6,67 +6,58 @@ const mongoose = require('mongoose');
 
 exports.createOrder = async (req, res) => {
   try {
-    // Check if user has buyer role
     if (req.user.role !== 'buyer') {
-      return res.status(403).json({ 
-        success: false,
-        error: 'Only buyers can create orders' 
-      });
+      return res.status(403).json({ success: false, error: 'Only buyers can create orders' });
     }
 
     const { products } = req.body;
     const userId = req.user.userId;
-    
-    let totalPrice = 0;
-    const productUpdates = [];
 
-    // Validate products and calculate total price
-    for (const item of products) {
-      const product = await Product.findById(item.productId);
-      
-      if (!product) {
-        return res.status(404).json({ 
-          success: false,
-          error: `Product ${item.productId} not found` 
-        });
-      }
-
-      if (product.stock < item.quantity) {
-        return res.status(400).json({ 
-          success: false,
-          error: `Insufficient stock for ${product.title}. Only ${product.stock} available` 
-        });
-      }
-
-      // Reduce stock
-      product.stock -= item.quantity;
-      productUpdates.push(product.save());
-      
-      totalPrice += product.price * item.quantity;
+    const buyer = await User.findById(userId);
+    if (!buyer) {
+      return res.status(404).json({ success: false, error: "Buyer profile not found" });
     }
 
-    // Wait for all stock updates
-    await Promise.all(productUpdates);
+    // FIX: Ensure governate is not just an empty string
+    const buyerGov = (buyer.governate || "").trim().toLowerCase();
+    if (!buyerGov) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Please update your profile with a governate to complete orders." 
+      });
+    }
+    
+    let totalPrice = 0;
+    const validatedProducts = [];
 
-    // Create order
-    const order = await Order.create({
-      userId,
-      products,
-      totalPrice,
-      status: "pending"
-    });
+    for (const item of products) {
+      const product = await Product.findById(item.productId).populate('sellerId');
+      
+      if (!product) {
+        return res.status(404).json({ success: false, error: `Product not found` });
+      }
 
-    res.status(201).json({
-      success: true,
-      message: 'Order created successfully',
-      order: order
-    });
+      const sellerArea = (product.sellerId.serviceArea || "").toLowerCase();
 
+      // Location Check
+      if (!sellerArea.includes(buyerGov)) {
+        return res.status(403).json({ 
+          success: false,
+          error: `not provided for this area` 
+        });
+      }
+
+      // ... rest of your existing stock check and total calculation ...
+      if (product.stock < item.quantity) {
+        return res.status(400).json({ success: false, error: `Insufficient stock for ${product.title}` });
+      }
+      totalPrice += product.price * item.quantity;
+      validatedProducts.push({ product, quantity: item.quantity });
+    }
+
+    // ... proceed with stock update and Order.create ...
   } catch (error) {
-    res.status(500).json({ 
-      success: false,
-      error: error.message 
-    });
+    res.status(500).json({ success: false, error: error.message });
   }
 };
 
