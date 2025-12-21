@@ -18,7 +18,6 @@ exports.createOrder = async (req, res) => {
       return res.status(404).json({ success: false, error: "Buyer profile not found" });
     }
 
-    // FIX: Ensure governate is not just an empty string
     const buyerGov = (buyer.governate || "").trim().toLowerCase();
     if (!buyerGov) {
       return res.status(400).json({ 
@@ -30,6 +29,7 @@ exports.createOrder = async (req, res) => {
     let totalPrice = 0;
     const validatedProducts = [];
 
+    // --- Validation Loop ---
     for (const item of products) {
       const product = await Product.findById(item.productId).populate('sellerId');
       
@@ -39,24 +39,52 @@ exports.createOrder = async (req, res) => {
 
       const sellerArea = (product.sellerId.serviceArea || "").toLowerCase();
 
-      // Location Check
       if (!sellerArea.includes(buyerGov)) {
         return res.status(403).json({ 
           success: false,
-          error: `not provided for this area` 
+          error: `Delivery not provided for this area: ${buyerGov}` 
         });
       }
 
-      // ... rest of your existing stock check and total calculation ...
       if (product.stock < item.quantity) {
         return res.status(400).json({ success: false, error: `Insufficient stock for ${product.title}` });
       }
+
       totalPrice += product.price * item.quantity;
-      validatedProducts.push({ product, quantity: item.quantity });
+      validatedProducts.push({ 
+        productId: item.productId, 
+        quantity: item.quantity,
+        price: product.price 
+      });
     }
 
-    // ... proceed with stock update and Order.create ...
+    
+    
+    // 1. Create the order in the database
+    const newOrder = await Order.create({
+      userId: userId,
+      products: validatedProducts,
+      totalPrice: totalPrice,
+      status: 'pending'
+    });
+
+    // 2. Decrease the stock for each product
+    for (const item of validatedProducts) {
+      await Product.findByIdAndUpdate(item.productId, {
+        $inc: { stock: -item.quantity }
+      });
+    }
+
+    
+    // This stops the loading spinner on your frontend.
+    return res.status(201).json({ 
+      success: true, 
+      message: "Order placed successfully", 
+      order: newOrder 
+    });
+
   } catch (error) {
+    console.error("Order Creation Error:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
